@@ -25,7 +25,7 @@ Neovim 前端 for [Pi coding agent](https://pi.dev)。零第三方运行时依�
 
 ## 快速开始
 
-`:Pi`（或 `,pi`）打开居中的大号 float：顶部状态栏（winbar：模型 | 思考级别 | 阶段 | 会话名）、
+`:Pi`（或 `,ai`）打开居中的大号 float：顶部状态栏（winbar：模型 | 思考级别 | 阶段 | 会话名）、
 中间聊天区（markdown 渲染 + 工具块可折叠）、底部输入区。
 
 首次打开会 spawn `pi --mode rpc`（cwd = 当前项目目录）并拉取会话状态。关闭 float 不杀进程，
@@ -45,13 +45,13 @@ float 内输入区（buffer-local）：
 | `<Tab>` | 补全（`/` slash 命令、`@` 文件引用、路径） |
 | `q` | 关闭 float |
 
-建议的用户侧键位（`<Leader>=,`）：
+建议的用户侧键位（`<Leader>=,`，避开已被占用的 `,p` 粘贴等键）：
 
 ```lua
 local map = require("core.keymaps.util").map
-map("n", "<Leader>pi", function() require("pi").toggle() end, { desc = "pi: toggle float" })
-map("n", "<Leader>mm", function() require("pi").cycle_model() end, { desc = "pi: cycle model" })
-map("n", "<Leader>mt", function() require("pi").cycle_thinking_level() end, { desc = "pi: cycle thinking" })
+map("n", "<Leader>ai", function() require("pi").toggle() end, { desc = "pi: toggle float" })
+map("n", "<Leader>am", function() require("pi").cycle_model() end, { desc = "pi: cycle model" })
+map("n", "<Leader>at", function() require("pi").cycle_thinking_level() end, { desc = "pi: cycle thinking" })
 ```
 
 命令：`:Pi` / `:PiToggle`（开关）、`:PiNewSession`、`:PiCycleModel`、`:PiCycleThinking`、`:PiDiff`（本轮改动 diff）。

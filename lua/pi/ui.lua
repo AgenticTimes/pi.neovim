@@ -82,7 +82,16 @@ local function start_client_if_needed()
     on_exit = function(code, signal)
       if not M.is_open() then return end
       vim.schedule(function()
-        vim.notify("pi exited (code=" .. tostring(code) .. " signal=" .. tostring(signal) .. ")", vim.log.levels.ERROR)
+        local msg = "⚠ pi exited (code=" .. tostring(code) .. " signal=" .. tostring(signal) .. ")"
+        local buf = M.chat_buf()
+        if buf then
+          require("pi.render").append(buf, msg)
+          local tail = client.stderr_tail()
+          if #tail > 0 then
+            require("pi.render").append(buf, table.concat(tail, "\n"))
+          end
+        end
+        vim.notify(msg, vim.log.levels.ERROR)
       end)
     end,
   })

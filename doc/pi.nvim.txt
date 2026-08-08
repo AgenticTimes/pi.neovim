@@ -21,7 +21,7 @@ pattern.
 
 Requirements: Neovim >= 0.10, pi CLI >= 0.84 in PATH.
 
-Start with `:Pi` (or `,pi`). A large centered float opens with a status
+Start with `:Pi` (or `,ai`). A large centered float opens with a status
 bar (winbar: model | thinking | status | session), a markdown chat area
 with foldable tool blocks, and an input area. Closing the float keeps the
 chat buffer and the pi process alive.
@@ -50,11 +50,11 @@ M-p / M-n   History navigation.
 <Tab>       Completion: / slash commands, @ file references, paths.
 q           Close the float (normal mode).
 
-Recommended global maps (Leader is `,`):
+Recommended global maps (Leader is `,`; avoid `,p` which is paste):
 
-,pi           toggle
-,mm           cycle model
-,mt           cycle thinking
+,ai          toggle
+,am          cycle model
+,at          cycle thinking
 
 ==============================================================================
 4. CONFIGURATION                                            *pi-config*
