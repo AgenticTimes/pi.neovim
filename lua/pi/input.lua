@@ -34,11 +34,11 @@ function M.send()
   local text = M.get_text()
   if text == "" then return end
   M.set_text("")
-  if #history == 0 or history[1] ~= text then
-    table.insert(history, 1, text)
-    if #history > 100 then table.remove(history) end
+  if #history == 0 or history[#history] ~= text then
+    table.insert(history, text)          -- 追加，最旧在前
+    if #history > 100 then table.remove(history, 1) end
   end
-  history_index = 1  -- 指向刚发送的 prompt；再 M-p 回到上一条
+  history_index = #history               -- 指向最新；M-p 回到上一条
   local message = context.expand(text)
   if not client.is_running() then
     vim.notify("pi not running; prompt not sent", vim.log.levels.WARN)
