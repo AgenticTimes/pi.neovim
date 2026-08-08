@@ -1,0 +1,112 @@
+*pi.nvim.txt*                    Neovim frontend for pi coding agent
+
+==============================================================================
+CONTENTS                                                    *pi.nvim*
+
+1. Introduction ...................... |pi-intro|
+2. Commands .......................... |pi-commands|
+3. Keymaps ........................... |pi-keymaps|
+4. Configuration ..................... |pi-config|
+5. Events ............................ |pi-events|
+6. Context placeholders .............. |pi-context|
+
+==============================================================================
+1. INTRODUCTION                                        *pi-intro*
+
+pi.nvim is a zero-dependency Neovim frontend for the pi coding agent CLI
+(@earendil-works/pi-coding-agent). It spawns `pi --mode rpc` as a job and
+speaks newline-delimited JSON over stdio (the same protocol the Emacs
+frontend uses). UI follows opencode.nvim's centered-float interaction
+pattern.
+
+Requirements: Neovim >= 0.10, pi CLI >= 0.84 in PATH.
+
+Start with `:Pi` (or `,pi`). A large centered float opens with a status
+bar (winbar: model | thinking | status | session), a markdown chat area
+with foldable tool blocks, and an input area. Closing the float keeps the
+chat buffer and the pi process alive.
+
+==============================================================================
+2. COMMANDS                                                *pi-commands*
+
+:Pi                        Toggle the float open/closed.
+:PiToggle                  Same as :Pi.
+:PiNewSession              Start a new session and refresh the chat.
+:PiCycleModel              Cycle to the next available model.
+:PiCycleThinking           Cycle the thinking level.
+:PiDiff                    Open a scratch diff buffer of files touched by
+                           pi this session.
+
+==============================================================================
+3. KEYMAPS                                                   *pi-keymaps*
+
+Input area (buffer-local; configurable via |pi-config| keys):
+
+<CR>        Send prompt (queues as follow-up while busy).
+<C-s>       Steer (interrupts after the current tool; busy only).
+<C-c>       Abort current operation.
+<C-k>       Clear input.
+M-p / M-n   History navigation.
+<Tab>       Completion: / slash commands, @ file references, paths.
+q           Close the float (normal mode).
+
+Recommended global maps (Leader is `,`):
+
+,nn  or  ,pi   toggle
+,mm            cycle model
+,mt            cycle thinking
+
+==============================================================================
+4. CONFIGURATION                                            *pi-config*
+
+require('pi').setup({ ... })
+
+executable      pi CLI command name or {cmd, args...} list. Default "pi".
+window.width     Float width ratio of columns. Default 0.85.
+window.height    Float height ratio of lines. Default 0.85.
+window.border    Float border style. Default "rounded".
+keys.send        Default "<CR>".
+keys.steer       Default "<C-s>".
+keys.abort       Default "<C-c>".
+keys.clear       Default "<C-k>".
+keys.history_prev Default "<M-p>".
+keys.history_next Default "<M-n>".
+keys.close       Default "q" (normal mode in input buffer).
+keys.complete    Default "<Tab>".
+rpc_timeout      RPC response timeout in seconds. Default 30.
+contexts         Table of custom placeholder getters { ["@name"] = fn }.
+
+==============================================================================
+5. EVENTS                                                      *pi-events*
+
+Every RPC event fires a `User PiEvent` autocmd; the event table is stored
+in |vim.g|.pi_event.
+
+Programming API:
+
+    require('pi').on('agent_start', function(event) ... end)
+    require('pi').on('*', function(event) ... end)   -- all events
+
+Event types: agent_start, agent_end, message_start, message_end,
+tool_execution_start, tool_execution_update, tool_execution_end,
+compaction_start, compaction_end, auto_retry_start, auto_retry_end,
+extension_error.
+
+==============================================================================
+6. CONTEXT PLACEHOLDERS                                    *pi-context*
+
+Placeholders are expanded in the input at send time:
+
+@this         Visual selection, or the current line.
+@buffer       Full current buffer text.
+@buffers      Text of all loaded named buffers.
+@diagnostics  Diagnostics for the current buffer.
+@visible      Text visible in the current window.
+
+Custom getters:
+
+    require('pi').setup({ contexts = {
+        ['@file'] = function() return vim.fn.expand('%:p') end,
+    } })
+
+ vim:tw=78:ts=8:noet:ft=help:norl:
