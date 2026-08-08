@@ -52,9 +52,9 @@ q           Close the float (normal mode).
 
 Recommended global maps (Leader is `,`):
 
-,nn  or  ,pi   toggle
-,mm            cycle model
-,mt            cycle thinking
+,pi           toggle
+,mm           cycle model
+,mt           cycle thinking
 
 ==============================================================================
 4. CONFIGURATION                                            *pi-config*
