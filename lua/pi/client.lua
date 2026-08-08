@@ -103,9 +103,13 @@ local function on_stdout_data(err, data)
   if data == nil then return end
   local lines
   lines, partial_out = M.split_lines(partial_out, data)
-  for _, line in ipairs(lines) do
-    dispatch_line(line)
-  end
+  if #lines == 0 then return end
+  -- uv 回调是 fast event context，buffer API（渲染/autocmd）会抛 E5560 → 推迟到主循环
+  vim.schedule(function()
+    for _, line in ipairs(lines) do
+      dispatch_line(line)
+    end
+  end)
 end
 
 local function on_stderr_data(err, data)
@@ -119,30 +123,43 @@ local function on_stderr_data(err, data)
   log("error", data)
 end
 
-local function on_exit(code, signal)
-  local was_running = process ~= nil
-  if stdin_pipe then pcall(function() stdin_pipe:close() end) end
-  stdin_pipe = nil
-  process = nil
+local function on_process_exit(handle, stdin, code, signal)
+  -- 只清理属于本进程的状态（旧进程迟到的退出回调不得误清新进程）
+  local was_this = process == handle
+  if was_this then
+    process = nil
+  end
+  if stdin_pipe == stdin then
+    pcall(function() stdin_pipe:close() end)
+    stdin_pipe = nil
+  end
   -- 残留未完成行（进程退出前未换行的输出）
   if #partial_out > 0 then
     local line = partial_out
     partial_out = ""
-    if #line > 0 then dispatch_line(line) end
+    if #line > 0 then
+      vim.schedule(function() dispatch_line(line) end)
+    end
   end
-  -- 未完成的请求 → 报错
+  -- 未完成的请求 → 报错（只清属于本进程的请求）
   for id, e in pairs(pending) do
-    if e.timer then e.timer:stop() end
-    e.cb(nil, "pi process exited (code=" .. tostring(code) .. " signal=" .. tostring(signal) .. ")")
-    pending[id] = nil
+    if e.process == handle then
+      if e.timer then e.timer:stop() end
+      e.cb(nil, "pi process exited (code=" .. tostring(code) .. " signal=" .. tostring(signal) .. ")")
+      pending[id] = nil
+    end
   end
-  if callbacks.on_exit and was_running then
+  if callbacks.on_exit and was_this then
     callbacks.on_exit(code, signal)
   end
 end
 
 function M.start(opts)
   opts = opts or {}
+  -- 单例：已有进程先停掉（旧进程的迟到退出回调由身份守卫隔离）
+  if M.is_running() then
+    M.stop()
+  end
   callbacks.on_event = opts.on_event
   callbacks.on_exit = opts.on_exit
   callbacks.on_log = opts.on_log
@@ -163,7 +180,9 @@ function M.start(opts)
     args = args,
     cwd = cwd,
     stdio = { stdin, stdout, stderr },
-  }, on_exit)
+  }, function(code, signal)
+    on_process_exit(handle, stdin, code, signal)
+  end)
   if not handle then
     log("error", "failed to start pi: " .. tostring(file))
     return false
@@ -215,7 +234,7 @@ function M.request(type, params, cb, timeout_seconds)
   local id = M.next_id()
   local key = tostring(id)
   local timeout = timeout_seconds or config.get().rpc_timeout
-  local entry = { cb = cb or function() end, command = type, pending_id = key }
+  local entry = { cb = cb or function() end, command = type, pending_id = key, process = process }
   if timeout and timeout > 0 then
     entry.timer = vim.uv.new_timer()
     entry.timer:start(math.floor(timeout * 1000), 0, function()

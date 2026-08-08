@@ -39,6 +39,12 @@ function M.send()
     if #history > 100 then table.remove(history, 1) end
   end
   history_index = #history               -- 指向最新；M-p 回到上一条
+  -- 用户消息回显到聊天区
+  local ui = require("pi.ui")
+  local cb = ui.chat_buf()
+  if cb then
+    require("pi.render").add_message(cb, "user", os.date("%H:%M"), { { type = "text", text = text } })
+  end
   local message = context.expand(text)
   if not client.is_running() then
     vim.notify("pi not running; prompt not sent", vim.log.levels.WARN)

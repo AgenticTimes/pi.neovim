@@ -27,16 +27,16 @@ h.t("full conversation via fake pi", function()
   render.setup(buf)
   session.reset({})
   local done = false
+  local rendered = false
+  require("pi.events").on("message_start", function(ev)
+    if ev.message and ev.message.content then
+      render.add_message(buf, "assistant", "00:00", ev.message.content)
+      rendered = true
+    end
+  end)
   client.request("prompt", { message = "hi" }, function() done = true end)
   h.wait(3000, function() return done end, "prompt response")
-  h.wait(3000, function()
-    local s = session.get()
-    if s.status == "streaming" and s.current_message and s.current_message.content then
-      render.add_message(buf, "assistant", "00:00", s.current_message.content)
-      return true
-    end
-    return false
-  end, "message rendered")
+  h.wait(3000, function() return rendered end, "message rendered")
   h.wait(3000, function() return session.get().status == "idle" end, "agent_end processed")
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local joined = table.concat(lines, "\n")

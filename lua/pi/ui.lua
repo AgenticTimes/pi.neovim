@@ -42,6 +42,30 @@ local function input_buf_get()
   return b
 end
 
+local function render_event(ev)
+  -- 事件 → 渲染翻译（ui 持有的 render hook）
+  local buf = M.chat_buf()
+  if not buf then return end
+  local r = require("pi.render")
+  if ev.type == "message_start" then
+    if ev.message and ev.message.content then
+      r.add_message(buf, ev.message.role, os.date("%H:%M"), ev.message.content)
+    end
+  elseif ev.type == "tool_execution_start" then
+    r.start_tool(buf, ev)
+  elseif ev.type == "tool_execution_update" then
+    r.update_tool(buf, ev)
+  elseif ev.type == "tool_execution_end" then
+    r.end_tool(buf, ev)
+    require("pi.edits").reload_after(ev)
+  end
+  -- 状态类事件刷新 winbar header
+  if ev.type ~= "message_start" and ev.type ~= "message_end" then
+    local win = M.chat_win()
+    if win then r.set_header(win, session.get()) end
+  end
+end
+
 local function start_client_if_needed()
   if client.is_running() then return true end
   local cfg = config.get()
@@ -105,6 +129,8 @@ function M.open()
   wins.input = vim.api.nvim_open_win(input, true, input_opts)
   require("pi.render").setup_window(wins.chat)
   require("pi.render").set_header(wins.chat, session.get())
+  -- 渲染钩子幂等注册（client 重启不丢）
+  events.set_render_hook(render_event)
   require("pi.input").enter_insert()
   start_client_if_needed()
 end

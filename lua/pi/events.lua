@@ -3,6 +3,12 @@ local session = require("pi.session")
 
 local M = {}
 local handlers = {}  -- type -> { [fn] = true }
+local render_hook = nil
+
+---注册渲染钩子：每次事件在 session 更新后被调用（ui 持有，client 重启不丢）。
+function M.set_render_hook(fn)
+  render_hook = fn
+end
 
 function M.on(event_type, cb)
   handlers[event_type] = handlers[event_type] or {}
@@ -30,6 +36,9 @@ end
 
 function M.dispatch(event)
   session.apply_event(event)
+  if render_hook then
+    pcall(render_hook, event)
+  end
   M.emit(event)
 end
 
