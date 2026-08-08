@@ -1,0 +1,51 @@
+local h = require("helpers")
+local render = require("pi.render")
+
+h.t("header line has role, time and fill", function()
+  local s = render.header("assistant", "14:32", 40)
+  h.ok(s:match("^── assistant · 14:32"), "prefix")
+  h.eq(#s, 40)
+end)
+
+h.t("tool line shows name and summary", function()
+  h.eq(render.tool_line("read", "src/app.ts"), "▸ read  src/app.ts")
+  h.eq(render.tool_line("bash", nil), "▸ bash")
+end)
+
+h.t("indent prefixes every line", function()
+  h.eq(render.indent("a\nb\nc", 2), "  a\n  b\n  c")
+  h.eq(render.indent("", 2), "")
+end)
+
+h.t("buffer ops append and reset", function()
+  local buf = h.new_buf()
+  render.setup(buf)
+  render.append(buf, "line1\nline2")
+  h.eq(vim.api.nvim_buf_get_lines(buf, 0, -1, false), { "line1", "line2" })
+  render.reset(buf)
+  h.eq(#vim.api.nvim_buf_get_lines(buf, 0, -1, false), 1)
+  h.eq(vim.bo[buf].foldmethod, "indent")
+end)
+
+h.t("start/update/end tool produces indented foldable block", function()
+  local buf = h.new_buf()
+  render.setup(buf)
+  render.start_tool(buf, { toolName = "write", args = { file_path = "a.txt" } })
+  render.update_tool(buf, { toolCallId = "t1", partialResult = "ok" })
+  render.end_tool(buf, { toolCallId = "t1" })
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  h.eq(lines[1], "▸ write  a.txt")
+  h.ok(lines[2]:match("^  ok$"), "tool output indented: " .. tostring(lines[2]))
+end)
+
+h.t("set_header formats winbar", function()
+  local buf = h.new_buf()
+  local win = vim.api.nvim_open_win(buf, false, {
+    relative = "editor", row = 0, col = 0, width = 80, height = 5, style = "minimal",
+  })
+  render.set_header(win, { model = "gpt-4o", thinking_level = "low", status = "idle", session_name = "work" })
+  local wb = vim.wo[win].winbar or ""
+  h.ok(wb:match("gpt%-4o"), "model in winbar")
+  h.ok(wb:match("low"), "thinking in winbar")
+  vim.api.nvim_win_close(win, true)
+end)
