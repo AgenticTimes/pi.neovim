@@ -6,7 +6,13 @@ function M.t(name, fn)
 end
 
 function M.eq(a, b, label)
-  if a ~= b then
+  local same
+  if type(a) == "table" and type(b) == "table" then
+    same = vim.deep_equal(a, b)
+  else
+    same = (a == b)
+  end
+  if not same then
     error(("assert_eq failed%s: expected %s, got %s")
       :format(label and (" " .. label) or "", vim.inspect(b), vim.inspect(a)), 2)
   end
