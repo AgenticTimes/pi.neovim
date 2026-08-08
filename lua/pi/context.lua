@@ -62,7 +62,7 @@ end
 
 function M.expand(text, getters)
   getters = getters or vim.tbl_extend("force", M.default_getters(), require("pi.config").get().contexts or {})
-  local out = text:gsub("(%f[%a]@[%a_][%w_-]*)", function(tok)
+  local out = text:gsub("(%f[%a@]@[%a_][%w_-]*)", function(tok)
     local fn = getters[tok]
     if not fn then return tok end
     local val = fn()
