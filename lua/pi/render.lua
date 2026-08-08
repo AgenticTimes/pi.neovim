@@ -5,7 +5,7 @@ function M.header(role, time, width)
   width = width or 60
   local role_label = role == "user" and "用户" or "助手"
   local prefix = string.format("── %s · %s ", role_label, time or "")
-  local fill = string.rep("─", math.max(1, width - #prefix))
+  local fill = string.rep("─", math.max(1, width - vim.fn.strwidth(prefix)))
   return prefix .. fill
 end
 
@@ -30,10 +30,10 @@ function M.setup(buf)
   end
 end
 
----窗口级选项（fold 相关在 Neovim 里是 window-local）。
+---窗口级选项（fold 相关在 Neovim 里是 window-local；foldlevelstart 是全局，改用 foldlevel）。
 function M.setup_window(win)
   vim.wo[win].foldmethod = "indent"
-  vim.wo[win].foldlevelstart = 99
+  vim.wo[win].foldlevel = 99
   vim.wo[win].foldcolumn = "1"
 end
 
@@ -44,8 +44,14 @@ end
 function M.append(buf, text)
   if text == "" then return end
   local lines = vim.split(text, "\n", { plain = true })
-  local cur = vim.api.nvim_buf_line_count(buf)
-  vim.api.nvim_buf_set_lines(buf, cur, cur, false, lines)
+  local count = vim.api.nvim_buf_line_count(buf)
+  local start_idx = count
+  -- nvim buffer 恒以空行结尾：插入到尾部空行之前，保证内容连续无空行
+  if count >= 1 then
+    local last = vim.api.nvim_buf_get_lines(buf, count - 1, count, false)[1]
+    if last == "" then start_idx = count - 1 end
+  end
+  vim.api.nvim_buf_set_lines(buf, start_idx, start_idx, false, lines)
 end
 
 function M.add_message(buf, role, time, content_blocks)
