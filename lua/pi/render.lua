@@ -24,7 +24,7 @@ end
 
 function M.setup(buf)
   vim.bo[buf].buftype = "nofile"
-  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].bufhidden = "hide"
   if pcall(vim.treesitter.language.add, "markdown") then
     vim.bo[buf].filetype = "markdown"
   end
