@@ -3,7 +3,7 @@ local render = require("pi.render")
 
 h.t("header line has role, time and fill", function()
   local s = render.header("assistant", "14:32", 40)
-  h.ok(s:match("^── assistant · 14:32"), "prefix")
+  h.ok(s:match("^── 助手 · 14:32"), "prefix: " .. s)
   h.eq(#s, 40)
 end)
 
@@ -24,7 +24,18 @@ h.t("buffer ops append and reset", function()
   h.eq(vim.api.nvim_buf_get_lines(buf, 0, -1, false), { "line1", "line2" })
   render.reset(buf)
   h.eq(#vim.api.nvim_buf_get_lines(buf, 0, -1, false), 1)
-  h.eq(vim.bo[buf].foldmethod, "indent")
+end)
+
+h.t("setup_window applies window-local fold options", function()
+  local buf = h.new_buf()
+  local win = vim.api.nvim_open_win(buf, false, {
+    relative = "editor", row = 0, col = 0, width = 80, height = 5, style = "minimal",
+  })
+  render.setup(buf)
+  render.setup_window(win)
+  h.eq(vim.wo[win].foldmethod, "indent")
+  h.eq(vim.wo[win].foldcolumn, "1")
+  vim.api.nvim_win_close(win, true)
 end)
 
 h.t("start/update/end tool produces indented foldable block", function()

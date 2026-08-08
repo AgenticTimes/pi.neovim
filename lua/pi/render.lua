@@ -25,12 +25,16 @@ end
 function M.setup(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
-  vim.bo[buf].foldmethod = "indent"
-  vim.bo[buf].foldlevelstart = 99
-  vim.bo[buf].foldcolumn = "1"
   if pcall(vim.treesitter.language.add, "markdown") then
     vim.bo[buf].filetype = "markdown"
   end
+end
+
+---窗口级选项（fold 相关在 Neovim 里是 window-local）。
+function M.setup_window(win)
+  vim.wo[win].foldmethod = "indent"
+  vim.wo[win].foldlevelstart = 99
+  vim.wo[win].foldcolumn = "1"
 end
 
 function M.reset(buf)
