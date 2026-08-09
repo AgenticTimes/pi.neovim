@@ -1,0 +1,18 @@
+local h = require("helpers")
+local term = require("pi.terminal")
+
+h.t("toggle opens and closes a terminal float", function()
+  term.toggle()
+  h.ok(term.is_open(), "open after toggle")
+  term.toggle()
+  h.ok(not term.is_open(), "closed after toggle")
+end)
+
+h.t("reopen reuses the same terminal buffer", function()
+  term.toggle()
+  local buf = vim.api.nvim_win_get_buf(vim.api.nvim_get_current_win())
+  term.toggle()
+  term.toggle()
+  h.eq(vim.api.nvim_win_get_buf(vim.api.nvim_get_current_win()), buf, "same terminal buffer on reopen")
+  term.toggle()
+end)

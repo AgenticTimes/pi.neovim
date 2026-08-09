@@ -2,7 +2,15 @@
 
 Neovim 前端 for [Pi coding agent](https://pi.dev)。零第三方运行时依赖。
 
-参考：Emacs 前端 `pi-coding-agent`（JSON-over-stdio RPC 通信骨架）与 `opencode.nvim`（大号居中 float 交互模式）。
+## 两种使用方式
+
+**`:Pi`（`,ai`）— 原生 pi TUI float 终端（默认，开箱即用）**
+在 85%×85% 居中圆角 float 里跑完整的 pi TUI（颜色/spinner/命令菜单/skill 补全都是 pi 原生体验），
+与 opencode 集成同款模式。关闭不杀进程，重开秒回。
+
+**`:PiChat` — 定制聊天 UI（实验性）**
+JSON-over-stdio RPC 驱动：markdown 聊天区 + 多行输入区，支持 `@buffer`/`@diagnostics` 上下文注入、
+`User PiEvent` autocmd、buffer 自动 reload、`:PiDiff`。功能逐步完善中。
 
 ## 需求
 
