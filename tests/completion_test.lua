@@ -33,6 +33,20 @@ h.t("file references come from git ls-files", function()
   end
 end)
 
+h.t("slash completion includes skills and prompt commands", function()
+  completion.set_commands({
+    { name = "compact", source = "prompt" },
+    { name = "review", source = "skill" },
+    { name = "edit", source = "extension" },
+  })
+  local items = completion._slash_items("/")
+  local sources = {}
+  for _, it in ipairs(items) do sources[it.word] = it.menu end
+  h.eq(sources["/compact"], "prompt")
+  h.eq(sources["/review"], "skill")
+  h.eq(sources["/edit"], "extension")
+end)
+
 h.t("complete is safe with empty lists and unknown tokens", function()
   completion.set_commands({})
   local buf = h.new_buf()

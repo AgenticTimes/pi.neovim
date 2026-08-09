@@ -73,6 +73,24 @@ end
 function M.setup(buf)
   local keys = require("pi.config").get().keys
   vim.keymap.set("i", keys.complete, function() M.complete() end, { buffer = buf, desc = "pi: complete" })
+  -- 原生 pi 行为：输入 / （命令位置）或 @ 自动弹出补全菜单
+  vim.api.nvim_create_autocmd("InsertCharPre", {
+    buffer = buf,
+    callback = function()
+      local ch = vim.v.char
+      if ch == "/" then
+        local line = vim.api.nvim_get_current_line()
+        local col = vim.api.nvim_win_get_cursor(0)[2] -- 0-based
+        local prev = (col > 0) and line:sub(col, col) or ""
+        -- 仅当 / 位于行首或空白后（命令位置）才自动弹出；路径中的 / 交给 <Tab>
+        if prev == "" or prev:match("%s") then
+          vim.schedule(function() M.complete() end)
+        end
+      elseif ch == "@" then
+        vim.schedule(function() M.complete() end)
+      end
+    end,
+  })
 end
 
 return M

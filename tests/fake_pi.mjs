@@ -35,7 +35,11 @@ const defaultScenario = {
 			id: "%ID%",
 			command: "get_commands",
 			success: true,
-			data: [],
+			data: [
+				{ name: "compact", source: "prompt", description: "Compact context" },
+				{ name: "review", source: "skill", description: "Review code" },
+				{ name: "tweak", source: "skill", description: "Tweak" },
+			],
 		},
 	],
 	get_messages: [
