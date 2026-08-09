@@ -10,15 +10,28 @@ Neovim frontend for [Pi coding agent](https://pi.dev). Zero third-party runtime 
 
 ## Two ways to use it
 
-**`:Pi` — native pi TUI in a float terminal (default, out of the box)**
+### `:Pi` — native pi TUI in a float terminal (default)
+
 Runs the full native pi TUI in a centered rounded float (85% × 85%), the same pattern as
 opencode terminal integrations. Colors, spinners, `/` command menu, skill completion — all
-native pi. Closing the window keeps the process alive; reopening is instant.
+native pi.
 
-**`:PiChat` — custom chat UI (experimental)**
+**Show / hide with the shortcut key:**
+
+1. Press the toggle key (default mapping below: `,ai`) → the float slides open with pi ready
+2. Work inside the TUI as usual (type prompts, run `/` commands)
+3. Hide it: press `,ai` again — or inside the float press `Ctrl-\ Ctrl-n` then `q`
+4. Reopen any time with `,ai` — the pi process stays alive, so it's instant
+
+> Closing the window does **not** kill the pi process; the session is preserved until you quit Neovim.
+
+### `:PiChat` — custom chat UI (experimental)
+
 JSON-over-stdio RPC: a markdown chat buffer + multi-line input buffer, with `@buffer` /
 `@diagnostics` context injection, `User PiEvent` autocmds, buffer auto-reload on tool writes,
 and `:PiDiff`.
+
+**Show / hide:** `:PiChat` opens it, `:PiChat` again (or `q` in the input buffer) closes it.
 
 ## Requirements
 
