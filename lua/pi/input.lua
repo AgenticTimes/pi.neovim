@@ -20,14 +20,25 @@ function M.set_text(s)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 end
 
+local active_buf = nil
+local echo_fn = nil
+
+---ui 在打开时设置活动输入 buffer；解耦 input 对 ui 的依赖。
+function M.set_buffer(buf)
+  active_buf = buf
+end
+
+---ui 注入用户消息回显回调（text -> 渲染到聊天区）。
+function M.set_echo_fn(fn)
+  echo_fn = fn
+end
+
 function M.current_buf()
-  local ui = require("pi.ui")
-  local buf = ui.input_buf()
-  if not buf then
-    -- 测试或未打开时：用当前 buffer
-    buf = vim.api.nvim_get_current_buf()
+  if active_buf and vim.api.nvim_buf_is_valid(active_buf) then
+    return active_buf
   end
-  return buf
+  -- 测试或未打开时：用当前 buffer
+  return vim.api.nvim_get_current_buf()
 end
 
 function M.send()
@@ -39,11 +50,9 @@ function M.send()
     if #history > 100 then table.remove(history, 1) end
   end
   history_index = #history               -- 指向最新；M-p 回到上一条
-  -- 用户消息回显到聊天区
-  local ui = require("pi.ui")
-  local cb = ui.chat_buf()
-  if cb then
-    require("pi.render").add_message(cb, "user", os.date("%H:%M"), { { type = "text", text = text } })
+  -- 用户消息回显（回调由 ui 注入，解耦 input 对 ui 的依赖）
+  if echo_fn then
+    echo_fn(text)
   end
   local message = context.expand(text)
   if not client.is_running() then
@@ -88,16 +97,15 @@ function M.history(delta)
   end
 end
 
-function M.enter_insert()
-  local ui = require("pi.ui")
-  local win = ui.input_win()
-  if win then
+function M.enter_insert(win)
+  -- 接收显式窗口参数（ui 传入），不反向 require ui
+  if win and vim.api.nvim_win_is_valid(win) then
     vim.api.nvim_set_current_win(win)
-    vim.cmd("startinsert")
   end
+  vim.cmd("startinsert")
 end
 
-function M.setup(buf)
+function M.setup(buf, close_fn)
   local keys = config.get().keys
   vim.keymap.set({ "i", "n" }, keys.send, function() M.send() end, { buffer = buf, desc = "pi: send" })
   vim.keymap.set({ "i", "n" }, keys.steer, function() M.steer() end, { buffer = buf, desc = "pi: steer" })
@@ -105,7 +113,9 @@ function M.setup(buf)
   vim.keymap.set({ "i", "n" }, keys.clear, function() M.clear() end, { buffer = buf, desc = "pi: clear input" })
   vim.keymap.set("i", keys.history_prev, function() M.history(-1) end, { buffer = buf, desc = "pi: history prev" })
   vim.keymap.set("i", keys.history_next, function() M.history(1) end, { buffer = buf, desc = "pi: history next" })
-  vim.keymap.set("n", keys.close, function() require("pi.ui").close() end, { buffer = buf, desc = "pi: close" })
+  if close_fn then
+    vim.keymap.set("n", keys.close, close_fn, { buffer = buf, desc = "pi: close" })
+  end
 end
 
 return M

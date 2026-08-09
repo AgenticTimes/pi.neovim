@@ -1,6 +1,6 @@
 -- lua/pi/ui.lua — 居中大 float：chat（winbar header）+ input 两个窗口
+-- 职责：窗口/buffer 生命周期 + 事件→渲染翻译。进程生命周期见 pi.runtime。
 local config = require("pi.config")
-local client = require("pi.client")
 local events = require("pi.events")
 local session = require("pi.session")
 
@@ -37,12 +37,19 @@ local function input_buf_get()
   vim.bo[b].buftype = "nofile"
   vim.bo[b].bufhidden = "hide"
   bufs.input = b
-  require("pi.input").setup(b)
+  require("pi.input").set_buffer(b)
+  require("pi.input").set_echo_fn(function(text)
+    local cb = M.chat_buf()
+    if cb then
+      require("pi.render").add_message(cb, "user", os.date("%H:%M"), { { type = "text", text = text } })
+    end
+  end)
+  require("pi.input").setup(b, function() M.close() end)
   require("pi.completion").setup(b)
   return b
 end
 
-local msg_streamed = false  -- 当前消息是否已流式渲染过（避免 message_end 重复）
+local msg_streamed = {}  -- buf -> 当前消息是否已流式渲染（避免 message_end 重复）
 
 local function render_event(ev)
   -- 事件 → 渲染翻译（ui 持有的 render hook）
@@ -55,11 +62,11 @@ local function render_event(ev)
       if ev.message.role ~= "user" then
         r.begin_message(buf, ev.message.role, os.date("%H:%M"))
       end
-      msg_streamed = false
+      msg_streamed[buf] = false
       -- message_start 若已带全文（如工具结果消息/fake pi），直接渲染
       if ev.message.content and #ev.message.content > 0 then
         r.add_content(buf, ev.message.content)
-        msg_streamed = true
+        msg_streamed[buf] = true
       end
     end
   elseif ev.type == "message_update" then
@@ -67,14 +74,14 @@ local function render_event(ev)
     if ae then
       if ae.type == "text_delta" then
         r.stream(buf, ae.delta)
-        msg_streamed = true
+        msg_streamed[buf] = true
       elseif ae.type == "text_start" then
         r.begin_text(buf)
       elseif ae.type == "text_end" then
         -- delta 已覆盖内容
       elseif ae.type == "thinking_start" then
         r.begin_thinking(buf)
-        msg_streamed = true
+        msg_streamed[buf] = true
       elseif ae.type == "thinking_delta" then
         r.stream(buf, ae.delta or "", "  ")
       elseif ae.type == "thinking_end" then
@@ -89,10 +96,10 @@ local function render_event(ev)
     end
   elseif ev.type == "message_end" then
     -- 权威全文：若此前没有流式内容（例如未处理 delta 的消息），补渲染
-    if not msg_streamed and ev.message and ev.message.content then
+    if not msg_streamed[buf] and ev.message and ev.message.content then
       r.add_content(buf, ev.message.content)
     end
-    msg_streamed = false
+    msg_streamed[buf] = false
   elseif ev.type == "tool_execution_start" then
     r.start_tool(buf, ev)
   elseif ev.type == "tool_execution_update" then
@@ -108,19 +115,17 @@ local function render_event(ev)
   end
 end
 
-local function start_client_if_needed()
-  if client.is_running() then return true end
-  local cfg = config.get()
-  local cmd = {}
-  if type(cfg.executable) == "string" then
-    cmd = { cfg.executable, "--mode", "rpc" }
-  else
-    cmd = vim.list_extend({}, cfg.executable)
-  end
-  local ok = client.start({
-    cmd = cmd,
-    cwd = vim.fn.getcwd(),
-    on_event = function(ev) events.dispatch(ev) end,
+local function start_runtime()
+  -- 进程生命周期交给 runtime 模块；ui 只提供 on_ready / on_exit 呈现
+  return require("pi.runtime").ensure_started({
+    on_ready = function()
+      local buf = M.chat_buf()
+      if buf then
+        require("pi.render").reset(buf)
+        local win = M.chat_win()
+        if win then require("pi.render").set_header(win, session.get()) end
+      end
+    end,
     on_exit = function(code, signal)
       if not M.is_open() then return end
       vim.schedule(function()
@@ -128,7 +133,7 @@ local function start_client_if_needed()
         local buf = M.chat_buf()
         if buf then
           require("pi.render").append(buf, msg)
-          local tail = client.stderr_tail()
+          local tail = require("pi.client").stderr_tail()
           if #tail > 0 then
             require("pi.render").append(buf, table.concat(tail, "\n"))
           end
@@ -137,26 +142,6 @@ local function start_client_if_needed()
       end)
     end,
   })
-  if not ok then return false end
-  -- 拉初始状态
-  client.request("get_state", {}, function(resp)
-    if resp and resp.success then
-      session.reset(resp.data)
-      local buf = M.chat_buf()
-      if buf then
-        require("pi.render").reset(buf)
-        local win = M.chat_win()
-        if win then require("pi.render").set_header(win, session.get()) end
-      end
-      -- 会话就绪后再拉命令列表（过早请求可能失败且从不重试）
-      client.request("get_commands", {}, function(resp2)
-        if resp2 and resp2.success then
-          require("pi.completion").set_commands(resp2.data)
-        end
-      end)
-    end
-  end)
-  return true
 end
 
 function M.open()
@@ -183,8 +168,8 @@ function M.open()
   require("pi.render").set_header(wins.chat, session.get())
   -- 渲染钩子幂等注册（client 重启不丢）
   events.set_render_hook(render_event)
-  require("pi.input").enter_insert()
-  start_client_if_needed()
+  require("pi.input").enter_insert(wins.input)
+  start_runtime()
 end
 
 function M.close()
@@ -209,7 +194,7 @@ function M.input_win() return M.is_open() and wins.input or nil end
 function M.focus_input()
   if M.is_open() then
     vim.api.nvim_set_current_win(wins.input)
-    require("pi.input").enter_insert()
+    require("pi.input").enter_insert(wins.input)
   end
 end
 

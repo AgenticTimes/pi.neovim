@@ -1,8 +1,10 @@
 -- lua/pi/render.lua — 聊天渲染：markdown 文本写入 + 流式行内追加 + 高亮 + winbar header
 local M = {}
 
--- 流式渲染状态：当前内容行是否已存在（true 时 stream 追加到行尾，false 时开新行）
-local streaming_line = false
+-- 流式渲染状态按 buffer 记录（多实例安全）：buf -> 当前内容行是否已存在
+local streaming = {}
+local function streaming_set(buf, v) streaming[buf] = v end
+local function streaming_get(buf) return streaming[buf] == true end
 
 local NS = nil
 local function ns()
@@ -117,7 +119,7 @@ end
 
 function M.reset(buf)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "— pi session ready —" })
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 ---在 buffer 末尾追加若干行（插入到尾部空行之前），并按行前缀高亮。
@@ -143,7 +145,7 @@ end
 ---仅写消息头行（不写内容）。
 function M.begin_message(buf, role, time)
   M.append(buf, M.header(role, time))
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 ---渲染 content blocks（不含头行）。
@@ -166,17 +168,17 @@ end
 
 function M.begin_thinking(buf)
   M.append(buf, "[thinking]")
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 ---text_start：新文本块，下一个 delta 从新行开始。
 function M.begin_text(buf)
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 function M.end_thinking(buf)
   M.append(buf, "  ── thinking done ──")
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 ---流式追加：无换行的 delta 接到当前内容行末尾（真实 pi 逐词推送，必须行内拼接）。
@@ -194,11 +196,11 @@ function M.stream(buf, text, ind)
   local cur = (idx >= 0) and vim.api.nvim_buf_get_lines(buf, idx, idx + 1, false)[1] or ""
   local parts = vim.split(text, "\n", { plain = true })
   local first = parts[1]
-  if streaming_line then
+  if streaming_get(buf) then
     vim.api.nvim_buf_set_lines(buf, idx, idx + 1, false, { cur .. first })
   else
     M.append(buf, ind .. first)
-    streaming_line = true
+    streaming_set(buf, true)
   end
   for i = 2, #parts do
     if parts[i] ~= "" then
@@ -211,7 +213,7 @@ function M.start_tool(buf, event)
   local a = event.args or {}
   local summary = a.file_path or a.path or a.filename or a.command or ""
   M.append(buf, M.tool_line(event.toolName or "tool", summary))
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 function M.update_tool(buf, event)
@@ -222,7 +224,7 @@ end
 
 function M.end_tool(buf, event)
   M.append(buf, "  ── tool done ──")
-  streaming_line = false
+  streaming_set(buf, false)
 end
 
 ---延迟折叠最近一个 [thinking] 块（foldmethod=expr：缩进内容行成 fold）。
