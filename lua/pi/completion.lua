@@ -2,8 +2,63 @@
 local M = {}
 local commands = {}   -- { { name=..., source=... }, ... }
 
+---从 SKILL.md frontmatter 提取 name（fallback：首个 # 标题）。
+local function parse_skill_name_impl(path)
+  local fh = io.open(path, "r")
+  if not fh then return nil end
+  local content = fh:read("*a")
+  fh:close()
+  local name = content:match("^%-%-%-%s*\nname:%s*([^\n]+)")
+  if not name then name = content:match("^#+%s*([^\n]+)") end
+  if not name then return nil end
+  return name:gsub("^[%s'\"]+", ""):gsub("[%s'\"]+$", "")
+end
+
+M.parse_skill_name = parse_skill_name_impl
+
+---本地兜底命令列表：~/.agents/skills/*/SKILL.md 与 ~/.pi/agent/prompts/*.md。
+---当 RPC get_commands 返回空（某些环境/项目下）时保证 / 仍有候选。
+function M.load_local_commands()
+  local out = {}
+  local skills_dir = vim.fn.expand("~/.agents/skills")
+  if vim.fn.isdirectory(skills_dir) == 1 then
+    for _, d in ipairs(vim.fn.glob(skills_dir .. "/*", false, true)) do
+      if vim.fn.isdirectory(d) == 1 then
+        local md = d .. "/SKILL.md"
+        if vim.fn.filereadable(md) == 1 then
+          local name = parse_skill_name_impl(md)
+          if name then
+            table.insert(out, { name = "skill:" .. name, source = "skill" })
+          end
+        end
+      end
+    end
+  end
+  local prompts_dir = vim.fn.expand("~/.pi/agent/prompts")
+  if vim.fn.isdirectory(prompts_dir) == 1 then
+    for _, f in ipairs(vim.fn.glob(prompts_dir .. "/*.md", false, true)) do
+      table.insert(out, { name = vim.fn.fnamemodify(f, ":t:r"), source = "prompt" })
+    end
+  end
+  return out
+end
+
 function M.set_commands(list)
-  commands = list or {}
+  commands = {}
+  local seen = {}
+  for _, c in ipairs(list or {}) do
+    if c and c.name and not seen[c.name] then
+      seen[c.name] = true
+      table.insert(commands, c)
+    end
+  end
+  -- RPC 未覆盖的 skills/prompts 从文件系统补齐（去重）
+  for _, c in ipairs(M.load_local_commands()) do
+    if not seen[c.name] then
+      seen[c.name] = true
+      table.insert(commands, c)
+    end
+  end
 end
 
 function M._current_token()
