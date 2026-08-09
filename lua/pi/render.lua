@@ -213,7 +213,7 @@ function M.end_tool(buf, event)
   streaming_line = false
 end
 
----延迟折叠最近一个 [thinking] 块（foldmethod=indent：内容行缩进 2 格成 fold）。
+---延迟折叠最近一个 [thinking] 块（foldmethod=expr：缩进内容行成 fold）。
 function M.fold_last_thinking(buf, win, delay_ms)
   delay_ms = delay_ms or 3000
   vim.defer_fn(function()
@@ -226,10 +226,19 @@ function M.fold_last_thinking(buf, win, delay_ms)
       if lines[i]:match("^%[thinking%]") then hdr = i break end -- 1-based
     end
     if not hdr then return end
-    local content_line = hdr + 1 -- 首行缩进内容 = fold 起点
+    -- 找头行后第一个缩进行（fold 起点）；空 thinking 块可能没有缩进内容
+    local content_line = hdr + 1
+    while content_line <= #lines do
+      if (lines[content_line] or ""):sub(1, 2) == "  " then break end
+      content_line = content_line + 1
+    end
+    if content_line > #lines then return end -- 没有可折叠内容
     vim.api.nvim_win_call(win, function()
       vim.api.nvim_win_set_cursor(win, { content_line, 0 })
-      vim.cmd("normal! zc")
+      -- 仅当该行确实处于 fold 中才 zc，否则 E490；再 pcall 兜底
+      if vim.fn.foldlevel(content_line) > 0 then
+        pcall(vim.cmd, "normal! zc")
+      end
     end)
   end, delay_ms)
 end
