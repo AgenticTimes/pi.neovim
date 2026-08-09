@@ -68,8 +68,10 @@ local function render_event(ev)
       if ae.type == "text_delta" then
         r.stream(buf, ae.delta)
         msg_streamed = true
-      elseif ae.type == "text_start" or ae.type == "text_end" then
-        -- 无操作：delta 已覆盖
+      elseif ae.type == "text_start" then
+        r.begin_text(buf)
+      elseif ae.type == "text_end" then
+        -- delta 已覆盖内容
       elseif ae.type == "thinking_start" then
         r.begin_thinking(buf)
         msg_streamed = true

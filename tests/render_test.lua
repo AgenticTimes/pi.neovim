@@ -51,6 +51,34 @@ h.t("start/update/end tool produces indented foldable block", function()
   h.ok(lines[2]:match("^  ok$"), "tool output indented: " .. tostring(lines[2]))
 end)
 
+h.t("stream concatenates deltas onto one line", function()
+  local buf = h.new_buf()
+  render.setup(buf)
+  render.begin_message(buf, "assistant", "00:00")
+  render.begin_text(buf)
+  render.stream(buf, "Hello ")
+  render.stream(buf, "world")
+  render.stream(buf, " foo")
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  -- 内容应拼在同一个新行：Hello world foo
+  local content_line
+  for _, l in ipairs(lines) do
+    if l == "Hello world foo" then content_line = l end
+  end
+  h.ok(content_line ~= nil, "deltas concatenated on one line; got: " .. vim.inspect(lines))
+end)
+
+h.t("stream honors embedded newlines", function()
+  local buf = h.new_buf()
+  render.setup(buf)
+  render.begin_message(buf, "assistant", "00:00")
+  render.begin_text(buf)
+  render.stream(buf, "line1\nline2")
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  h.ok(vim.tbl_contains(lines, "line1") and vim.tbl_contains(lines, "line2"),
+    "multi-line delta splits into lines: " .. vim.inspect(lines))
+end)
+
 h.t("set_header formats winbar", function()
   local buf = h.new_buf()
   local win = vim.api.nvim_open_win(buf, false, {
