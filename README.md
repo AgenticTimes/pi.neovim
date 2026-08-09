@@ -4,6 +4,10 @@
 
 Neovim frontend for [Pi coding agent](https://pi.dev). Zero third-party runtime dependencies.
 
+<p align="center">
+  <img src="assets/usage.png" width="750" alt="pi.neovim usage"/>
+</p>
+
 ## Two ways to use it
 
 **`:Pi` — native pi TUI in a float terminal (default, out of the box)**
