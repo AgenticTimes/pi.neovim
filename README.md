@@ -116,16 +116,21 @@ require("pi").on("*", function(event) end) -- all events
 
 ## Options
 
+Most options only affect `:PiChat` (the custom chat UI). If you only use the default `:Pi`
+(native TUI float), the only one worth setting is `warm_start`.
+
 ```lua
 require("pi").setup({
+  warm_start = false,                      -- (:Pi / :PiChat) preload pi in background for instant first open
+  warm_start_delay = 2000,                 -- (:Pi / :PiChat) warm-up delay (ms)
+
+  -- Below apply to :PiChat only
   executable = "pi",                       -- pi CLI command or {cmd, arg...}
   window = { width = 0.85, height = 0.85, border = "rounded" },
   keys = { send = "<CR>", steer = "<C-s>", abort = "<C-c>", clear = "<C-k>",
            history_prev = "<M-p>", history_next = "<M-n>", close = "q", complete = "<Tab>" },
-  rpc_timeout = 30,                        -- seconds
-  warm_start = false,                      -- preload pi in background for instant first open
-  warm_start_delay = 2000,                 -- warm-up delay (ms)
-  contexts = {},                           -- custom context placeholders
+  rpc_timeout = 30,                        -- RPC response timeout (seconds)
+  contexts = {},                           -- custom @placeholder getters for context injection
 })
 ```
 
