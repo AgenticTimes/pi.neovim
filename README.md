@@ -1,124 +1,132 @@
 # pi.neovim
 
-Neovim 前端 for [Pi coding agent](https://pi.dev)。零第三方运行时依赖。
+Neovim frontend for [Pi coding agent](https://pi.dev). Zero third-party runtime dependencies.
 
-## 两种使用方式
+## Two ways to use it
 
-**`:Pi`（`,ai`）— 原生 pi TUI float 终端（默认，开箱即用）**
-在 85%×85% 居中圆角 float 里跑完整的 pi TUI（颜色/spinner/命令菜单/skill 补全都是 pi 原生体验），
-与 opencode 集成同款模式。关闭不杀进程，重开秒回。
+**`:Pi` — native pi TUI in a float terminal (default, out of the box)**
+Runs the full native pi TUI in a centered rounded float (85% × 85%), the same pattern as
+opencode terminal integrations. Colors, spinners, `/` command menu, skill completion — all
+native pi. Closing the window keeps the process alive; reopening is instant.
 
-**`:PiChat` — 定制聊天 UI（实验性）**
-JSON-over-stdio RPC 驱动：markdown 聊天区 + 多行输入区，支持 `@buffer`/`@diagnostics` 上下文注入、
-`User PiEvent` autocmd、buffer 自动 reload、`:PiDiff`。功能逐步完善中。
+**`:PiChat` — custom chat UI (experimental)**
+JSON-over-stdio RPC: a markdown chat buffer + multi-line input buffer, with `@buffer` /
+`@diagnostics` context injection, `User PiEvent` autocmds, buffer auto-reload on tool writes,
+and `:PiDiff`.
 
-## 需求
+## Requirements
 
-- Neovim ≥ 0.10（零第三方运行时依赖）
-- pi CLI ≥ 0.84（`@earendil-works/pi-coding-agent`），在 PATH 中
-- 可选：treesitter markdown grammar（有则聊天区 markdown 高亮，无则退回基础渲染）
+- Neovim ≥ 0.10 (zero third-party runtime deps)
+- pi CLI ≥ 0.84 (`@earendil-works/pi-coding-agent`), in `PATH`
+- Optional: treesitter markdown grammar (markdown highlighting in the chat buffer)
 
-## 安装（lazy.nvim）
+## Install (lazy.nvim)
 
 ```lua
 {
-  dir = "~/source/pi/pi.neovim",
+  "your-user/pi.neovim",
   lazy = true,
-  cmd = { "Pi", "PiToggle", "PiNewSession", "PiCycleModel", "PiCycleThinking", "PiDiff" },
+  cmd = { "Pi", "PiToggle", "PiChat", "PiNewSession", "PiCycleModel", "PiCycleThinking", "PiDiff" },
   config = function()
     require("pi").setup({})
   end,
 }
 ```
 
-## 快速开始
+## Usage
 
-`:Pi`（或 `,ai`）打开居中的大号 float：顶部状态栏（winbar：模型 | 思考级别 | 阶段 | 会话名）、
-中间聊天区（markdown 渲染 + 工具块可折叠）、底部输入区。
-
-首次打开会 spawn `pi --mode rpc`（cwd = 当前项目目录）并拉取会话状态。关闭 float 不杀进程，
-聊天内容保留，重开秒回。
-
-## 键位
-
-float 内输入区（buffer-local）：
-
-| 键 | 动作 |
-| --- | --- |
-| `<CR>` | 发送（busy 时自动 follow-up 排队） |
-| `<C-s>` | steer（当前工具结束后打断） |
-| `<C-c>` | abort |
-| `<C-k>` | 清空输入 |
-| `M-p` / `M-n` | 历史导航 |
-| `<Tab>` | 补全（`/` slash 命令、`@` 文件引用、路径） |
-| `q` | 关闭 float |
-
-建议的用户侧键位（`<Leader>=,`，避开已被占用的 `,p` 粘贴等键）：
+`:Pi` (or map `,ai`) opens the native pi TUI float. If you use nvim-cmp, disable it inside
+the `pi://input` buffer (only relevant for `:PiChat`):
 
 ```lua
-local map = require("core.keymaps.util").map
-map("n", "<Leader>ai", function() require("pi").toggle() end, { desc = "pi: toggle float" })
-map("n", "<Leader>am", function() require("pi").cycle_model() end, { desc = "pi: cycle model" })
-map("n", "<Leader>at", function() require("pi").cycle_thinking_level() end, { desc = "pi: cycle thinking" })
-```
-
-命令：`:Pi` / `:PiToggle`（开关）、`:PiNewSession`、`:PiCycleModel`、`:PiCycleThinking`、`:PiDiff`（本轮改动 diff）。
-
-## 上下文占位符
-
-发送时在输入区展开：
-
-| 占位符 | 内容 |
-| --- | --- |
-| `@this` | 选区；无选区则光标所在行 |
-| `@buffer` | 当前 buffer 全文 |
-| `@buffers` | 所有已打开 buffer |
-| `@diagnostics` | 当前 buffer 诊断 |
-| `@visible` | 当前窗口可见文本 |
-
-自定义：`require("pi").setup({ contexts = { ["@file"] = function() return "..." end } })`。
-
-## 事件
-
-每个 RPC 事件触发 `User PiEvent` autocmd，事件内容在 `vim.g.pi_event`；也可用编程 API：
-
-```lua
-require("pi").on("agent_start", function(event) end)
-require("pi").on("*", function(event) end) -- 所有事件
-```
-
-## 配置项
-
-```lua
-require("pi").setup({
-  executable = "pi",                       -- pi CLI 命令名或 {cmd, arg...}
-  window = { width = 0.85, height = 0.85, border = "rounded" },
-  keys = { send = "<CR>", steer = "<C-s>", abort = "<C-c>", clear = "<C-k>",
-           history_prev = "<M-p>", history_next = "<M-n>", close = "q", complete = "<Tab>" },
-  rpc_timeout = 30,                        -- 秒
-  warm_start = false,                      -- 后台预热：空闲时提前启动 pi（首次 `,ai` 秒开）
-  warm_start_delay = 2000,                 -- 预热延迟（ms）
-  contexts = {},                           -- 自定义上下文占位符
+vim.api.nvim_create_autocmd("InsertEnter", {
+  pattern = "pi://input",
+  callback = function()
+    local ok, cmp = pcall(require, "cmp")
+    if ok and cmp.setup and cmp.setup.buffer then cmp.setup.buffer({ enabled = false }) end
+  end,
 })
 ```
 
-## 编辑同步
+Recommended global keymaps (Leader is `,`; avoid `,p` if you already map it to paste):
 
-pi 用 tool 写文件时，对应已打开的 buffer 自动 reload（未修改的才刷）；`:PiDiff` 打开本轮
-pi 触碰文件的 `git diff` 清单。
-
-## 已知限制
-
-- 补全的 `@` 文件引用依赖 `git ls-files`（非 git 仓库无候选）；`<Tab>` 若被 nvim-cmp 抢占，
-  可在 `pi://input` buffer 上禁用 cmp。
-- 会话树浏览 / fork / clone / export HTML / extension UI 请求 / `bash` 命令通道：暂未实现
-  （RPC 命令面已确认存在，架构预留）。
-
-## 测试
-
-```bash
-nvim --headless -u NONE -i NONE -l tests/run.lua     # 全量测试
-nvim --headless -u NONE -i NONE -l tests/smoke.lua   # 冒烟
+```lua
+vim.keymap.set("n", "<Leader>ai", function() require("pi").toggle() end, { desc = "pi: toggle TUI float" })
+vim.keymap.set("n", "<Leader>am", function() require("pi").cycle_model() end, { desc = "pi: cycle model" })
+vim.keymap.set("n", "<Leader>at", function() require("pi").cycle_thinking_level() end, { desc = "pi: cycle thinking" })
 ```
 
-测试用 `tests/fake_pi.mjs`（Node）伪装 pi RPC server，headless 跑通 client → session → render 全链路。
+Commands: `:Pi` / `:PiToggle` (toggle TUI float), `:PiChat` (custom chat UI),
+`:PiNewSession`, `:PiCycleModel`, `:PiCycleThinking`, `:PiDiff` (diff of files touched this session).
+
+## :PiChat input keymaps (buffer-local)
+
+| Key | Action |
+| --- | --- |
+| `<CR>` | Send (queues as follow-up while busy) |
+| `<C-s>` | Steer (interrupts after current tool) |
+| `<C-c>` | Abort |
+| `<C-k>` | Clear input |
+| `M-p` / `M-n` | History |
+| `<Tab>` | Complete (`/` commands, `@` file refs, paths) |
+| `q` | Close float |
+
+## Context placeholders (:PiChat)
+
+Expanded at send time:
+
+| Placeholder | Content |
+| --- | --- |
+| `@this` | Selection, or current line |
+| `@buffer` | Full current buffer |
+| `@buffers` | All loaded buffers |
+| `@diagnostics` | Current buffer diagnostics |
+| `@visible` | Visible window text |
+
+Custom: `require("pi").setup({ contexts = { ["@file"] = function() return "..." end } })`.
+
+## Events
+
+Every RPC event fires a `User PiEvent` autocmd (`vim.g.pi_event` carries the event); or use
+the API:
+
+```lua
+require("pi").on("agent_start", function(event) end)
+require("pi").on("*", function(event) end) -- all events
+```
+
+## Options
+
+```lua
+require("pi").setup({
+  executable = "pi",                       -- pi CLI command or {cmd, arg...}
+  window = { width = 0.85, height = 0.85, border = "rounded" },
+  keys = { send = "<CR>", steer = "<C-s>", abort = "<C-c>", clear = "<C-k>",
+           history_prev = "<M-p>", history_next = "<M-n>", close = "q", complete = "<Tab>" },
+  rpc_timeout = 30,                        -- seconds
+  warm_start = false,                      -- preload pi in background for instant first open
+  warm_start_delay = 2000,                 -- warm-up delay (ms)
+  contexts = {},                           -- custom context placeholders
+})
+```
+
+## Edit sync (:PiChat)
+
+When pi writes files via tools, open unmodified buffers reload automatically; `:PiDiff`
+opens a git diff of the files pi touched this session.
+
+## Known limitations
+
+- `@` file completion relies on `git ls-files` (no candidates outside a git repo).
+- Session-tree browsing / fork / clone / export HTML / extension UI requests / the `bash`
+  RPC channel are not implemented yet (RPC surface confirmed, architecture reserved).
+
+## Testing
+
+```bash
+nvim --headless -u NONE -i NONE -l tests/run.lua     # full suite
+nvim --headless -u NONE -i NONE -l tests/smoke.lua   # smoke
+```
+
+Tests use `tests/fake_pi.mjs` (Node) as a pi RPC double, exercising the full
+client → session → render pipeline headlessly.

@@ -1,0 +1,36 @@
+name: test
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim (stable)
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+
+      - name: Set up Node (fake pi double)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify versions
+        run: |
+          nvim --version | head -1
+          node --version
+
+      - name: Run full test suite
+        run: nvim --headless -u NONE -i NONE -l tests/run.lua
+
+      - name: Run smoke test
+        run: nvim --headless -u NONE -i NONE -l tests/smoke.lua
