@@ -18,6 +18,24 @@ local function geometry()
   }
 end
 
+---确保终端 buffer 存在。
+local function ensure_buf()
+  if not buf_id or not vim.api.nvim_buf_is_valid(buf_id) then
+    buf_id = vim.api.nvim_create_buf(false, true)
+    vim.bo[buf_id].bufhidden = "hide"
+  end
+  return buf_id
+end
+
+---在后台 buffer 里启动 pi（无窗口），预热进程；打开时秒开。
+function M.start_in_background()
+  local b = ensure_buf()
+  if not vim.b[b].pi_term_started then
+    vim.fn.termopen("pi", { cwd = vim.fn.getcwd() })
+    vim.b[b].pi_term_started = true
+  end
+end
+
 ---打开 float 终端并启动 pi（首次）。
 function M.open()
   if M.is_open() then
@@ -25,15 +43,12 @@ function M.open()
     vim.cmd("startinsert")
     return
   end
-  if not buf_id or not vim.api.nvim_buf_is_valid(buf_id) then
-    buf_id = vim.api.nvim_create_buf(false, true)
-    vim.bo[buf_id].bufhidden = "hide"
-  end
-  win_id = vim.api.nvim_open_win(buf_id, true, geometry())
+  local b = ensure_buf()
+  win_id = vim.api.nvim_open_win(b, true, geometry())
   -- 首次在终端 buffer 里启动 pi（job 常驻，关窗不杀）
-  if not vim.b[buf_id].pi_term_started then
+  if not vim.b[b].pi_term_started then
     vim.fn.termopen("pi", { cwd = vim.fn.getcwd() })
-    vim.b[buf_id].pi_term_started = true
+    vim.b[b].pi_term_started = true
   end
   vim.cmd("startinsert")
 end

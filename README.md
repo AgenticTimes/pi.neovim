@@ -96,6 +96,8 @@ require("pi").setup({
   keys = { send = "<CR>", steer = "<C-s>", abort = "<C-c>", clear = "<C-k>",
            history_prev = "<M-p>", history_next = "<M-n>", close = "q", complete = "<Tab>" },
   rpc_timeout = 30,                        -- 秒
+  warm_start = false,                      -- 后台预热：空闲时提前启动 pi（首次 `,ai` 秒开）
+  warm_start_delay = 2000,                 -- 预热延迟（ms）
   contexts = {},                           -- 自定义上下文占位符
 })
 ```

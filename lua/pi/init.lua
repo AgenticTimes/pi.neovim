@@ -14,6 +14,13 @@ function M.setup(opts)
       require("pi.terminal").on_resized()
     end,
   })
+  -- 后台预热：空闲时提前启动 pi（默认关闭，开启后首次 `,ai` 秒开）
+  local cfg = config.get()
+  if cfg.warm_start then
+    vim.defer_fn(function()
+      require("pi.terminal").start_in_background()
+    end, cfg.warm_start_delay or 2000)
+  end
 end
 
 ---默认动作：toggle 原生 pi TUI 的 float 终端（开箱即用）。
