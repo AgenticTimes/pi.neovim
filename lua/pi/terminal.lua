@@ -28,10 +28,14 @@ local function ensure_buf()
 end
 
 ---在后台 buffer 里启动 pi（无窗口），预热进程；打开时秒开。
+---termopen 会把终端挂到「当前 buffer」上，所以必须用 nvim_buf_call 锁定到
+---模块自己的 buffer，否则 pi 会跑到无关的当前 buffer 里，copy 也读不到内容。
 function M.start_in_background()
   local b = ensure_buf()
   if not vim.b[b].pi_term_started then
-    vim.fn.termopen("pi", { cwd = vim.fn.getcwd() })
+    vim.api.nvim_buf_call(b, function()
+      vim.fn.termopen("pi", { cwd = vim.fn.getcwd() })
+    end)
     vim.b[b].pi_term_started = true
   end
 end
@@ -64,6 +68,11 @@ function M.is_open()
   return win_id ~= nil and vim.api.nvim_win_is_valid(win_id)
 end
 
+---返回终端 buffer id（未创建时为 nil）。供外部检查/测试使用。
+function M.buf()
+  return buf_id
+end
+
 function M.toggle()
   if M.is_open() then
     M.close()
@@ -85,6 +94,10 @@ function M.copy_terminal_text()
     return
   end
   local lines = vim.api.nvim_buf_get_lines(buf_id, 0, -1, false)
+  -- TUI 退出后终端 buffer 会用空行垫满整个屏幕高度，复制前剔除尾部空行
+  while #lines > 0 and lines[#lines] == "" do
+    lines[#lines] = nil
+  end
   local text = table.concat(lines, "\n")
   if #text == 0 then
     vim.notify("pi 终端为空", vim.log.levels.INFO)
