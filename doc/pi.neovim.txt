@@ -5,108 +5,43 @@ CONTENTS                                                    *pi.neovim*
 
 1. Introduction ...................... |pi-intro|
 2. Commands .......................... |pi-commands|
-3. Keymaps ........................... |pi-keymaps|
-4. Configuration ..................... |pi-config|
-5. Events ............................ |pi-events|
-6. Context placeholders .............. |pi-context|
+3. Configuration ..................... |pi-config|
 
 ==============================================================================
 1. INTRODUCTION                                        *pi-intro*
 
-pi.neovim is a zero-dependency Neovim frontend for the pi coding agent CLI
-(@earendil-works/pi-coding-agent). It spawns `pi --mode rpc` as a job and
-speaks newline-delimited JSON over stdio (the same protocol the Emacs
-frontend uses). UI follows opencode.nvim's centered-float interaction
-pattern.
+pi.neovim is a zero-dependency Neovim wrapper that runs the native pi coding
+agent TUI (https://pi.dev) in a centered rounded float terminal — the same
+pattern as opencode terminal integrations.
 
 Requirements: Neovim >= 0.10, pi CLI >= 0.84 in PATH.
 
-Start with `:Pi` (or `,ai`). A large centered float opens with a status
-bar (winbar: model | thinking | status | session), a markdown chat area
-with foldable tool blocks, and an input area. Closing the float keeps the
-chat buffer and the pi process alive.
+Press `,ai` (or `:Pi`) to open. The float shows the full native pi TUI; closing
+the window keeps the pi process alive, so reopening is instant.
 
 ==============================================================================
-2. COMMANDS                                                *pi-commands*
+2. COMMANDS                                                  *pi-commands*
 
-:Pi                        Toggle the float open/closed.
-:PiToggle                  Same as :Pi.
-:PiNewSession              Start a new session and refresh the chat.
-:PiCycleModel              Cycle to the next available model.
-:PiCycleThinking           Cycle the thinking level.
-:PiDiff                    Open a scratch diff buffer of files touched by
-                           pi this session.
+:Pi               Toggle the float terminal open/closed.
+:PiToggle         Same as :Pi.
+:PiTermCopy       Copy the terminal scrollback to the clipboard. Handy for
+                  grabbing transient TUI warning/error text before it clears.
 
-==============================================================================
-3. KEYMAPS                                                   *pi-keymaps*
+Recommended global keymap (Leader is `,`):
 
-Input area (buffer-local; configurable via |pi-config| keys):
-
-<CR>        Send prompt (queues as follow-up while busy).
-<C-s>       Steer (interrupts after the current tool; busy only).
-<C-c>       Abort current operation.
-<C-k>       Clear input.
-M-p / M-n   History navigation.
-<Tab>       Completion: / slash commands, @ file references, paths.
-q           Close the float (normal mode).
-
-Recommended global maps (Leader is `,`; avoid `,p` which is paste):
-
-,ai          toggle
-,am          cycle model
-,at          cycle thinking
+    ,ai            toggle the float terminal
 
 ==============================================================================
-4. CONFIGURATION                                            *pi-config*
+3. CONFIGURATION                                            *pi-config*
 
 require('pi').setup({ ... })
 
-executable      pi CLI command name or {cmd, args...} list. Default "pi".
-window.width     Float width ratio of columns. Default 0.85.
-window.height    Float height ratio of lines. Default 0.85.
-window.border    Float border style. Default "rounded".
-keys.send        Default "<CR>".
-keys.steer       Default "<C-s>".
-keys.abort       Default "<C-c>".
-keys.clear       Default "<C-k>".
-keys.history_prev Default "<M-p>".
-keys.history_next Default "<M-n>".
-keys.close       Default "q" (normal mode in input buffer).
-keys.complete    Default "<Tab>".
-rpc_timeout      RPC response timeout in seconds. Default 30.
-contexts         Table of custom placeholder getters { ["@name"] = fn }.
-
-==============================================================================
-5. EVENTS                                                      *pi-events*
-
-Every RPC event fires a `User PiEvent` autocmd; the event table is stored
-in |vim.g|.pi_event.
-
-Programming API:
-
-    require('pi').on('agent_start', function(event) ... end)
-    require('pi').on('*', function(event) ... end)   -- all events
-
-Event types: agent_start, agent_end, message_start, message_end,
-tool_execution_start, tool_execution_update, tool_execution_end,
-compaction_start, compaction_end, auto_retry_start, auto_retry_end,
-extension_error.
-
-==============================================================================
-6. CONTEXT PLACEHOLDERS                                    *pi-context*
-
-Placeholders are expanded in the input at send time:
-
-@this         Visual selection, or the current line.
-@buffer       Full current buffer text.
-@buffers      Text of all loaded named buffers.
-@diagnostics  Diagnostics for the current buffer.
-@visible      Text visible in the current window.
-
-Custom getters:
-
-    require('pi').setup({ contexts = {
-        ['@file'] = function() return vim.fn.expand('%:p') end,
-    } })
+executable      pi CLI command name. Default "pi".
+window.width    Float width ratio of columns. Default 0.85.
+window.height   Float height ratio of lines. Default 0.85.
+window.border   Float border style. Default "rounded".
+warm_start      Preload pi in the background so the first open is instant.
+                Default false.
+warm_start_delay Warm-up delay in ms. Default 2000.
 
  vim:tw=78:ts=8:noet:ft=help:norl:

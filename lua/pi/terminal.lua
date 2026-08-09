@@ -5,8 +5,9 @@ local win_id = nil
 local buf_id = nil
 
 local function geometry()
-  local w = math.floor(vim.o.columns * 0.85)
-  local h = math.floor(vim.o.lines * 0.85)
+  local cfg = require("pi.config").get().window or { width = 0.85, height = 0.85, border = "rounded" }
+  local w = math.floor(vim.o.columns * cfg.width)
+  local h = math.floor(vim.o.lines * cfg.height)
   return {
     relative = "editor",
     row = math.floor((vim.o.lines - h) / 2),
@@ -14,7 +15,7 @@ local function geometry()
     width = w,
     height = h,
     style = "minimal",
-    border = "rounded",
+    border = cfg.border or "rounded",
   }
 end
 

@@ -2,28 +2,14 @@
 local M = {}
 
 local defaults = {
-  executable = "pi",            -- pi CLI 命令名（或绝对路径）
+  executable = "pi",            -- pi CLI 命令名
   window = {
-    width = 0.85,               -- 相对 columns 的比例
-    height = 0.85,              -- 相对 lines 的比例
+    width = 0.85,               -- float 宽度（相对 columns）
+    height = 0.85,              -- float 高度（相对 lines）
     border = "rounded",
   },
-  keys = {
-    send = "<CR>",
-    steer = "<C-s>",
-    abort = "<C-c>",
-    clear = "<C-k>",
-    history_prev = "<M-p>",
-    history_next = "<M-n>",
-    close = "q",
-    complete = "<Tab>",
-  },
-  rpc_timeout = 30,             -- 秒
-  thinking_fold_delay = 3000,   -- ms；thinking 结束后自动折叠的延迟（0 = 不自动折叠）
   warm_start = false,           -- 后台预热：空闲时提前启动 pi（首次打开秒开）
   warm_start_delay = 2000,      -- ms；预热延迟（VimEnter 后多久启动 pi）
-  log_level = "warn",
-  contexts = {},                -- 自定义上下文占位符 { ["@name"] = function() -> string }
 }
 
 local merged
