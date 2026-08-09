@@ -19,6 +19,7 @@ local defaults = {
     complete = "<Tab>",
   },
   rpc_timeout = 30,             -- 秒
+  thinking_fold_delay = 3000,   -- ms；thinking 结束后自动折叠的延迟（0 = 不自动折叠）
   log_level = "warn",
   contexts = {},                -- 自定义上下文占位符 { ["@name"] = function() -> string }
 }

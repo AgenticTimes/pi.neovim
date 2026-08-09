@@ -63,17 +63,44 @@ end
 function M.setup(buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "hide"
+  vim.bo[buf].shiftwidth = 2  -- foldmethod=indent 按 shiftwidth 计算折叠级别，2 格缩进才成 fold
   define_highlights()
   if pcall(vim.treesitter.language.add, "markdown") then
     vim.bo[buf].filetype = "markdown"
   end
 end
 
----窗口级选项（fold 相关在 Neovim 里是 window-local；foldlevelstart 是全局，改用 foldlevel）。
-function M.setup_window(win)
-  vim.wo[win].foldmethod = "indent"
+local active_fold_buf = nil
+
+---记录用于 foldexpr/foldtext 的活跃 buffer（单实例 client，模块级即可）。
+function M.set_fold_buf(buf)
+  active_fold_buf = buf
+end
+
+function M.foldexpr_do()
+  local lnum = vim.v.lnum
+  if not active_fold_buf or not vim.api.nvim_buf_is_valid(active_fold_buf) then return 0 end
+  local line = vim.api.nvim_buf_get_lines(active_fold_buf, lnum - 1, lnum, false)[1] or ""
+  if line:sub(1, 2) == "  " then return 1 end
+  return 0
+end
+
+function M.foldtext_do()
+  if not active_fold_buf or not vim.api.nvim_buf_is_valid(active_fold_buf) then return "" end
+  local s = vim.v.foldstart
+  return vim.api.nvim_buf_get_lines(active_fold_buf, s - 1, s, false)[1] or ""
+end
+
+---窗口级选项。
+---foldmethod=expr：2 格缩进行（thinking/工具输出）折叠为级 1。
+---用 v:lua 表达式（Lua 函数值不被 vim.wo 接受；且不用 getline()，它解析当前 buffer，聊天窗口非当前时出错）。
+function M.setup_window(win, buf)
+  M.set_fold_buf(buf)
+  vim.wo[win].foldmethod = "expr"
   vim.wo[win].foldlevel = 99
   vim.wo[win].foldcolumn = "1"
+  vim.wo[win].foldexpr = "v:lua.require('pi.render').foldexpr_do()"
+  vim.wo[win].foldtext = "v:lua.require('pi.render').foldtext_do()"
 end
 
 function M.reset(buf)
@@ -184,6 +211,27 @@ end
 function M.end_tool(buf, event)
   M.append(buf, "  ── tool done ──")
   streaming_line = false
+end
+
+---延迟折叠最近一个 [thinking] 块（foldmethod=indent：内容行缩进 2 格成 fold）。
+function M.fold_last_thinking(buf, win, delay_ms)
+  delay_ms = delay_ms or 3000
+  vim.defer_fn(function()
+    if not vim.api.nvim_buf_is_valid(buf) then return end
+    if not win or not vim.api.nvim_win_is_valid(win) then return end
+    -- 从尾部向上找最后一个 [thinking] 头行
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local hdr = nil
+    for i = #lines, 1, -1 do
+      if lines[i]:match("^%[thinking%]") then hdr = i break end -- 1-based
+    end
+    if not hdr then return end
+    local content_line = hdr + 1 -- 首行缩进内容 = fold 起点
+    vim.api.nvim_win_call(win, function()
+      vim.api.nvim_win_set_cursor(win, { content_line, 0 })
+      vim.cmd("normal! zc")
+    end)
+  end, delay_ms)
 end
 
 function M.set_header(win, s)

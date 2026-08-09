@@ -79,6 +79,11 @@ local function render_event(ev)
         r.stream(buf, ae.delta or "", "  ")
       elseif ae.type == "thinking_end" then
         r.end_thinking(buf)
+        local delay = require("pi.config").get().thinking_fold_delay or 0
+        if delay > 0 then
+          local win = M.chat_win()
+          if win then r.fold_last_thinking(buf, win, delay) end
+        end
       -- toolcall delta：真实执行由 tool_execution_* 事件渲染，这里忽略
       end
     end
@@ -173,7 +178,7 @@ function M.open()
   }
   wins.chat = vim.api.nvim_open_win(chat, false, chat_opts)
   wins.input = vim.api.nvim_open_win(input, true, input_opts)
-  require("pi.render").setup_window(wins.chat)
+  require("pi.render").setup_window(wins.chat, chat)
   require("pi.render").set_header(wins.chat, session.get())
   -- 渲染钩子幂等注册（client 重启不丢）
   events.set_render_hook(render_event)

@@ -34,8 +34,8 @@ h.t("setup_window applies window-local fold options", function()
     relative = "editor", row = 0, col = 0, width = 80, height = 5, style = "minimal",
   })
   render.setup(buf)
-  render.setup_window(win)
-  h.eq(vim.wo[win].foldmethod, "indent")
+  render.setup_window(win, buf)
+  h.eq(vim.wo[win].foldmethod, "expr")
   h.eq(vim.wo[win].foldcolumn, "1")
   vim.api.nvim_win_close(win, true)
 end)
@@ -92,6 +92,27 @@ h.t("stream honors embedded newlines", function()
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   h.ok(vim.tbl_contains(lines, "line1") and vim.tbl_contains(lines, "line2"),
     "multi-line delta splits into lines: " .. vim.inspect(lines))
+end)
+
+h.t("fold_last_thinking folds the thinking block after delay", function()
+  local buf = h.new_buf()
+  local win = vim.api.nvim_open_win(buf, false, {
+    relative = "editor", row = 0, col = 0, width = 80, height = 20, style = "minimal",
+  })
+  render.setup(buf)
+  render.setup_window(win, buf)
+  render.begin_message(buf, "assistant", "00:00")
+  render.begin_thinking(buf)
+  render.stream(buf, "step one", "  ")
+  render.stream(buf, "step two", "  ")
+  render.end_thinking(buf)
+  render.fold_last_thinking(buf, win, 50)
+  -- fold 是窗口状态：从聊天窗口上下文检查是否闭合
+  local closed = vim.wait(1000, function()
+    return vim.api.nvim_win_call(win, function() return vim.fn.foldclosed(4) ~= -1 end)
+  end, 20)
+  vim.api.nvim_win_close(win, true)
+  h.ok(closed, "thinking block folded after delay")
 end)
 
 h.t("set_header formats winbar", function()
