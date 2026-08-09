@@ -141,8 +141,11 @@ function M.end_thinking(buf)
 end
 
 ---流式追加：无换行的 delta 接到当前内容行末尾（真实 pi 逐词推送，必须行内拼接）。
-function M.stream(buf, text)
+---流式追加：无换行的 delta 接到当前内容行末尾（真实 pi 逐词推送，必须行内拼接）。
+---IND（可选）只在行首插入（新行起点 / 换行后续行），避免逐词追加时在行中间插入空格。
+function M.stream(buf, text, ind)
   if text == "" then return end
+  ind = ind or ""
   local count = vim.api.nvim_buf_line_count(buf)
   local idx = count - 1
   if idx >= 0 then
@@ -150,22 +153,18 @@ function M.stream(buf, text)
     if last == "" then idx = idx - 1 end
   end
   local cur = (idx >= 0) and vim.api.nvim_buf_get_lines(buf, idx, idx + 1, false)[1] or ""
-  local first, rest = text:match("^([^\n]*)\n(.*)$")
+  local parts = vim.split(text, "\n", { plain = true })
+  local first = parts[1]
   if streaming_line then
-    if first then
-      vim.api.nvim_buf_set_lines(buf, idx, idx + 1, false, { cur .. first })
-      M.append(buf, rest)
-    else
-      vim.api.nvim_buf_set_lines(buf, idx, idx + 1, false, { cur .. text })
-    end
+    vim.api.nvim_buf_set_lines(buf, idx, idx + 1, false, { cur .. first })
   else
-    if first then
-      M.append(buf, first)
-      M.append(buf, rest)
-    else
-      M.append(buf, text)
-    end
+    M.append(buf, ind .. first)
     streaming_line = true
+  end
+  for i = 2, #parts do
+    if parts[i] ~= "" then
+      M.append(buf, ind .. parts[i])
+    end
   end
 end
 

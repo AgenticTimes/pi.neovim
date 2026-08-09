@@ -76,7 +76,7 @@ local function render_event(ev)
         r.begin_thinking(buf)
         msg_streamed = true
       elseif ae.type == "thinking_delta" then
-        r.stream(buf, r.indent(ae.delta or "", 2))
+        r.stream(buf, ae.delta or "", "  ")
       elseif ae.type == "thinking_end" then
         r.end_thinking(buf)
       -- toolcall delta：真实执行由 tool_execution_* 事件渲染，这里忽略
