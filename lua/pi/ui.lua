@@ -148,11 +148,12 @@ local function start_client_if_needed()
         local win = M.chat_win()
         if win then require("pi.render").set_header(win, session.get()) end
       end
-    end
-  end)
-  client.request("get_commands", {}, function(resp)
-    if resp and resp.success then
-      require("pi.completion").set_commands(resp.data)
+      -- 会话就绪后再拉命令列表（过早请求可能失败且从不重试）
+      client.request("get_commands", {}, function(resp2)
+        if resp2 and resp2.success then
+          require("pi.completion").set_commands(resp2.data)
+        end
+      end)
     end
   end)
   return true
