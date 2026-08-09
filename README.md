@@ -1,5 +1,7 @@
 # pi.neovim
 
+[![CI](https://github.com/AgenticTimes/pi.neovim/actions/workflows/test.yml/badge.svg)](https://github.com/AgenticTimes/pi.neovim/actions/workflows/test.yml)
+
 Neovim frontend for [Pi coding agent](https://pi.dev). Zero third-party runtime dependencies.
 
 ## Two ways to use it
@@ -24,7 +26,7 @@ and `:PiDiff`.
 
 ```lua
 {
-  "your-user/pi.neovim",
+  "AgenticTimes/pi.neovim",
   lazy = true,
   cmd = { "Pi", "PiToggle", "PiChat", "PiNewSession", "PiCycleModel", "PiCycleThinking", "PiDiff" },
   config = function()
