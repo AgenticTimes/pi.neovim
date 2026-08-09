@@ -1,7 +1,7 @@
-*pi.nvim.txt*                    Neovim frontend for pi coding agent
+*pi.neovim.txt*                    Neovim frontend for pi coding agent
 
 ==============================================================================
-CONTENTS                                                    *pi.nvim*
+CONTENTS                                                    *pi.neovim*
 
 1. Introduction ...................... |pi-intro|
 2. Commands .......................... |pi-commands|
@@ -13,7 +13,7 @@ CONTENTS                                                    *pi.nvim*
 ==============================================================================
 1. INTRODUCTION                                        *pi-intro*
 
-pi.nvim is a zero-dependency Neovim frontend for the pi coding agent CLI
+pi.neovim is a zero-dependency Neovim frontend for the pi coding agent CLI
 (@earendil-works/pi-coding-agent). It spawns `pi --mode rpc` as a job and
 speaks newline-delimited JSON over stdio (the same protocol the Emacs
 frontend uses). UI follows opencode.nvim's centered-float interaction

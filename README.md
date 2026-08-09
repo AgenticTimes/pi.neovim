@@ -1,4 +1,4 @@
-# pi.nvim
+# pi.neovim
 
 Neovim 前端 for [Pi coding agent](https://pi.dev)。零第三方运行时依赖。
 
@@ -22,7 +22,7 @@ JSON-over-stdio RPC 驱动：markdown 聊天区 + 多行输入区，支持 `@buf
 
 ```lua
 {
-  dir = "~/source/pi/pi.nvim",
+  dir = "~/source/pi/pi.neovim",
   lazy = true,
   cmd = { "Pi", "PiToggle", "PiNewSession", "PiCycleModel", "PiCycleThinking", "PiDiff" },
   config = function()

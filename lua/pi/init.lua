@@ -1,5 +1,5 @@
 -- lua/pi/init.lua — 入口：setup、公共 API、命令注册
-local M = { name = "pi.nvim" }
+local M = { name = "pi.neovim" }
 
 local config = require("pi.config")
 local ui = require("pi.ui")

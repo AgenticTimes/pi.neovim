@@ -1,5 +1,5 @@
 -- tests/diag2.lua — 补全链路诊断（临时）
--- 用法: cd /tmp && nvim --headless -u ~/.config/nvim/init.lua -l ~/source/pi/pi.nvim/tests/diag2.lua
+-- 用法: cd /tmp && nvim --headless -u ~/.config/nvim/init.lua -l ~/source/pi/pi.neovim/tests/diag2.lua
 local out = {}
 local function log(...)
   local parts = {}

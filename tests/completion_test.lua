@@ -25,7 +25,7 @@ h.t("slash completion builds items from commands", function()
 end)
 
 h.t("file references come from git ls-files", function()
-  -- 当前 repo 是 pi.nvim 自己（git repo）→ ls-files 非空
+  -- 当前 repo 是 pi.neovim 自己（git repo）→ ls-files 非空
   local files = completion.git_files()
   h.ok(type(files) == "table", "git_files returns a table")
   if #files > 0 then

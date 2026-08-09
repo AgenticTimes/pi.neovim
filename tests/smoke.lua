@@ -1,4 +1,4 @@
--- tests/smoke.lua — pi.nvim 冒烟测试（独立运行）
+-- tests/smoke.lua — pi.neovim 冒烟测试（独立运行）
 -- 用法: nvim --headless -u NONE -i NONE -l tests/smoke.lua
 local results = { pass = 0, fail = 0 }
 local function check(label, cond)
