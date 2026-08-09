@@ -78,4 +78,21 @@ function M.on_resized()
   end
 end
 
+---复制终端 buffer 全部内容到剪贴板（含已被 TUI 交互刷掉的报警文本）。
+function M.copy_terminal_text()
+  if not buf_id or not vim.api.nvim_buf_is_valid(buf_id) then
+    vim.notify("pi 终端尚未启动", vim.log.levels.WARN)
+    return
+  end
+  local lines = vim.api.nvim_buf_get_lines(buf_id, 0, -1, false)
+  local text = table.concat(lines, "\n")
+  if #text == 0 then
+    vim.notify("pi 终端为空", vim.log.levels.INFO)
+    return
+  end
+  vim.fn.setreg("+", text)
+  vim.fn.setreg('"', text)
+  vim.notify(("已复制 pi 终端内容（%d 行，%d 字符）"):format(#lines, #text), vim.log.levels.INFO)
+end
+
 return M
