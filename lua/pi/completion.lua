@@ -128,24 +128,26 @@ end
 function M.setup(buf)
   local keys = require("pi.config").get().keys
   vim.keymap.set("i", keys.complete, function() M.complete() end, { buffer = buf, desc = "pi: complete" })
-  -- 原生 pi 行为：输入 / （命令位置）或 @ 自动弹出补全菜单
-  vim.api.nvim_create_autocmd("InsertCharPre", {
-    buffer = buf,
-    callback = function()
-      local ch = vim.v.char
-      if ch == "/" then
-        local line = vim.api.nvim_get_current_line()
-        local col = vim.api.nvim_win_get_cursor(0)[2] -- 0-based
-        local prev = (col > 0) and line:sub(col, col) or ""
-        -- 仅当 / 位于行首或空白后（命令位置）才自动弹出；路径中的 / 交给 <Tab>
+  -- 原生 pi 行为：输入 /（命令位置）或 @ 自动弹出补全菜单。
+  -- 用键位映射 + 同步 complete()（比 InsertCharPre + vim.schedule 更可靠：时机确定、菜单必弹）。
+  local function complete_on(char, command_pos_only)
+    return function()
+      local line = vim.api.nvim_get_current_line()
+      local col = vim.api.nvim_win_get_cursor(0)[2] -- 0-based
+      local prev = (col > 0) and line:sub(col, col) or ""
+      vim.api.nvim_feedkeys(char, "i", false) -- 先插入字符
+      if command_pos_only then
+        -- / 仅在行首或空白后（命令位置）弹命令菜单；路径中的 / 仍走 <Tab>
         if prev == "" or prev:match("%s") then
-          vim.schedule(function() M.complete() end)
+          M.complete()
         end
-      elseif ch == "@" then
-        vim.schedule(function() M.complete() end)
+      else
+        M.complete()
       end
-    end,
-  })
+    end
+  end
+  vim.keymap.set("i", "/", complete_on("/", true), { buffer = buf, desc = "pi: slash command complete" })
+  vim.keymap.set("i", "@", complete_on("@", false), { buffer = buf, desc = "pi: file reference complete" })
 end
 
 return M
