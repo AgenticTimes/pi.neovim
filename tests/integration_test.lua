@@ -27,16 +27,18 @@ h.t("full conversation via fake pi", function()
   render.setup(buf)
   session.reset({})
   local done = false
-  local rendered = false
-  require("pi.events").on("message_start", function(ev)
-    if ev.message and ev.message.content then
-      render.add_message(buf, "assistant", "00:00", ev.message.content)
-      rendered = true
+  local streamed = false
+  -- 真实 pi 用 message_update(text_delta) 流式推送；测试同样按流式渲染
+  require("pi.events").on("message_update", function(ev)
+    local ae = ev.assistantMessageEvent
+    if ae and ae.type == "text_delta" and ae.delta then
+      render.stream(buf, ae.delta)
+      streamed = true
     end
   end)
   client.request("prompt", { message = "hi" }, function() done = true end)
   h.wait(3000, function() return done end, "prompt response")
-  h.wait(3000, function() return rendered end, "message rendered")
+  h.wait(3000, function() return streamed end, "text delta streamed")
   h.wait(3000, function() return session.get().status == "idle" end, "agent_end processed")
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local joined = table.concat(lines, "\n")

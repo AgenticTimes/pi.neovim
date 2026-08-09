@@ -32,11 +32,14 @@ const defaultScenario = {
   prompt: [
     { type: "response", id: "%ID%", command: "prompt", success: true },
     { type: "agent_start" },
-    { type: "message_start", message: { role: "assistant",
-      content: [{ type: "text", text: "hello from fake pi" }] } },
+    { type: "message_start", message: { role: "assistant", content: [] } },
+    { type: "message_update", assistantMessageEvent: { type: "text_start", contentIndex: 0 } },
+    { type: "message_update", assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "hello from fake pi" } },
+    { type: "message_update", assistantMessageEvent: { type: "text_end", contentIndex: 0, content: "hello from fake pi" } },
     { type: "message_end", message: { role: "assistant",
       content: [{ type: "text", text: "hello from fake pi" }] } },
     { type: "agent_end", messages: [], willRetry: false },
+    { type: "agent_settled" },
   ],
   abort: [
     { type: "response", id: "%ID%", command: "abort", success: true },

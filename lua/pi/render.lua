@@ -55,20 +55,39 @@ function M.append(buf, text)
 end
 
 function M.add_message(buf, role, time, content_blocks)
+  M.begin_message(buf, role, time)
+  M.add_content(buf, content_blocks)
+end
+
+---仅写消息头行（不写内容）。
+function M.begin_message(buf, role, time)
   M.append(buf, M.header(role, time))
+end
+
+---渲染 content blocks（不含头行）。
+function M.add_content(buf, content_blocks)
   if not content_blocks then return end
   for _, block in ipairs(content_blocks) do
     if block.type == "text" and block.text then
       M.append(buf, block.text)
     elseif block.type == "thinking" then
-      M.append(buf, "[thinking]")
+      M.begin_thinking(buf)
       M.append(buf, M.indent(block.text or "", 2))
+      M.end_thinking(buf)
     elseif block.type == "tool_call" then
       M.start_tool(buf, { toolName = block.name, args = block.args or {} })
     elseif block.type == "tool_result" then
       M.update_tool(buf, { partialResult = block.text or "" })
     end
   end
+end
+
+function M.begin_thinking(buf)
+  M.append(buf, "[thinking]")
+end
+
+function M.end_thinking(buf)
+  M.append(buf, "  ── thinking done ──")
 end
 
 function M.stream(buf, text)

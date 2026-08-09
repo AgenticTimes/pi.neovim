@@ -31,6 +31,9 @@ function M.transition(status, event_type, data)
   elseif event_type == "auto_retry_end" then
     if not data.success and status == "sending" then return "idle" end
     return status
+  elseif event_type == "agent_settled" then
+    -- 完整回合已结束，无重试/压缩/排队续接
+    return "idle"
   end
   return status
 end

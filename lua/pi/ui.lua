@@ -42,15 +42,50 @@ local function input_buf_get()
   return b
 end
 
+local msg_streamed = false  -- 当前消息是否已流式渲染过（避免 message_end 重复）
+
 local function render_event(ev)
   -- 事件 → 渲染翻译（ui 持有的 render hook）
   local buf = M.chat_buf()
   if not buf then return end
   local r = require("pi.render")
   if ev.type == "message_start" then
-    if ev.message and ev.message.content then
-      r.add_message(buf, ev.message.role, os.date("%H:%M"), ev.message.content)
+    if ev.message then
+      -- 用户消息由 input.send 本地回显，这里跳过避免重复
+      if ev.message.role ~= "user" then
+        r.begin_message(buf, ev.message.role, os.date("%H:%M"))
+      end
+      msg_streamed = false
+      -- message_start 若已带全文（如工具结果消息/fake pi），直接渲染
+      if ev.message.content and #ev.message.content > 0 then
+        r.add_content(buf, ev.message.content)
+        msg_streamed = true
+      end
     end
+  elseif ev.type == "message_update" then
+    local ae = ev.assistantMessageEvent
+    if ae then
+      if ae.type == "text_delta" then
+        r.stream(buf, ae.delta)
+        msg_streamed = true
+      elseif ae.type == "text_start" or ae.type == "text_end" then
+        -- 无操作：delta 已覆盖
+      elseif ae.type == "thinking_start" then
+        r.begin_thinking(buf)
+        msg_streamed = true
+      elseif ae.type == "thinking_delta" then
+        r.stream(buf, r.indent(ae.delta or "", 2))
+      elseif ae.type == "thinking_end" then
+        r.end_thinking(buf)
+      -- toolcall delta：真实执行由 tool_execution_* 事件渲染，这里忽略
+      end
+    end
+  elseif ev.type == "message_end" then
+    -- 权威全文：若此前没有流式内容（例如未处理 delta 的消息），补渲染
+    if not msg_streamed and ev.message and ev.message.content then
+      r.add_content(buf, ev.message.content)
+    end
+    msg_streamed = false
   elseif ev.type == "tool_execution_start" then
     r.start_tool(buf, ev)
   elseif ev.type == "tool_execution_update" then
@@ -60,7 +95,7 @@ local function render_event(ev)
     require("pi.edits").reload_after(ev)
   end
   -- 状态类事件刷新 winbar header
-  if ev.type ~= "message_start" and ev.type ~= "message_end" then
+  if ev.type ~= "message_start" and ev.type ~= "message_update" and ev.type ~= "message_end" then
     local win = M.chat_win()
     if win then r.set_header(win, session.get()) end
   end

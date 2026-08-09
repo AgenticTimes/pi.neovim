@@ -38,9 +38,10 @@ h.t("prompt emits agent_start/end events", function()
   local done = false
   client.request("prompt", { message = "hi" }, function() done = true end)
   h.wait(3000, function() return done end, "prompt response")
-  h.wait(3000, function() return #events >= 4 end, "events arrived")
+  h.wait(3000, function() return events[#events] == "agent_settled" end, "events arrived")
   h.eq(events[1], "agent_start")
-  h.eq(events[#events], "agent_end")
+  h.eq(events[#events], "agent_settled")
+  h.ok(vim.tbl_contains(events, "message_update"), "streaming deltas present")
 
   client.stop()
 end)
