@@ -87,8 +87,20 @@ end
 
 function M.foldtext_do()
   if not active_fold_buf or not vim.api.nvim_buf_is_valid(active_fold_buf) then return "" end
-  local s = vim.v.foldstart
-  return vim.api.nvim_buf_get_lines(active_fold_buf, s - 1, s, false)[1] or ""
+  local s, e = vim.v.foldstart, vim.v.foldend
+  local n = e - s + 1
+  -- 用 fold 起点前一行分类：thinking / 工具 / 其他
+  local prev = (s > 1) and (vim.api.nvim_buf_get_lines(active_fold_buf, s - 2, s - 1, false)[1] or "") or ""
+  if prev:match("^%[thinking%]") then
+    return ("⋯ thinking · %d 行"):format(n)
+  end
+  if prev:match("^▸ ") then
+    return ("⋯ %s · %d 行"):format(prev:sub(3), n)
+  end
+  local first = vim.api.nvim_buf_get_lines(active_fold_buf, s - 1, s, false)[1] or ""
+  local clean = first:gsub("^%s+", "")
+  if #clean > 40 then clean = clean:sub(1, 40) .. "…" end
+  return ("⋯ %s · %d 行"):format(clean, n)
 end
 
 ---窗口级选项。
